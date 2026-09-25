@@ -146,7 +146,7 @@ function BigBtn({ icon, label, onClick, className, small }: { icon: React.ReactN
 
 function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end [&+&]:z-[60] justify-center bg-foreground/30" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/30" onClick={onClose}>
       <div className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-card p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-xl font-extrabold">{title}</h3>
