@@ -213,7 +213,7 @@ function HistoryModal({ entries, onClose, onAdd, onDel }: { entries: Entry[]; on
   const y = new Date(); y.setDate(y.getDate() - 1);
   const [date, setDate] = useState(toInput(y));
   const [time, setTime] = useState("12:00");
-  const [yy, mo, dd] = date.split("-").map(Number);
+  const [yy = 0, mo = 1, dd = 1] = date.split("-").map(Number);
   const [hh, mi] = time.split(":").map(Number);
   const t = new Date(yy, mo - 1, dd, hh || 0, mi || 0).getTime();
   const s = new Date(yy, mo - 1, dd).getTime();
