@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Baby, Milk, Droplet, Trash2, BarChart3, X, Play, Pause, Timer, Sparkles } from "lucide-react";
+import { Baby, Milk, Droplet, Trash2, BarChart3, X, Play, Pause, Timer, Sparkles, CalendarPlus } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -19,6 +19,7 @@ export const Route = createFileRoute("/")({
 type Entry =
   | { id: string; t: number; kind: "bottle"; ml: number; milk: "formula" | "materna" }
   | { id: string; t: number; kind: "breast"; min: number }
+  | { id: string; t: number; kind: "pump"; ml: number }
   | { id: string; t: number; kind: "diaper"; type: "pipi" | "popo" | "ambos" };
 
 const KEY = "mi-bebe-registros";
@@ -28,7 +29,9 @@ const hora = (t: number) => new Date(t).toLocaleTimeString("es", { hour: "2-digi
 function Index() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [modal, setModal] = useState<null | "bottle" | "breast" | "chart">(null);
+  const [modal, setModal] = useState<null | "bottle" | "breast" | "pump" | "chart" | "history">(null);
+  const [past, setPast] = useState<null | "bottle" | "breast" | "pump">(null);
+  const [pastT, setPastT] = useState<number>(0);
   const [toast, setToast] = useState("");
 
   useEffect(() => {
@@ -65,13 +68,13 @@ function Index() {
         <div className="grid grid-cols-2 gap-3">
           <BigBtn className="bg-primary text-primary-foreground" onClick={() => setModal("bottle")} icon={<Milk className="h-9 w-9" />} label="Toma de Biberón" />
           <BigBtn className="bg-accent text-accent-foreground" onClick={() => setModal("breast")} icon={<Sparkles className="h-9 w-9" />} label="Toma de Pecho" />
+          <div className="col-span-2"><BigBtn small className="w-full bg-secondary text-secondary-foreground" onClick={() => setModal("pump")} icon={<span className="text-3xl">🫙</span>} label="Extracción" /></div>
         </div>
       </Section>
 
       <Section title="Pañales">
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <BigBtn small className="bg-secondary text-secondary-foreground" onClick={() => diaper("pipi", "Pipí")} icon={<Droplet className="h-8 w-8" />} label="Pipí" />
-          <BigBtn small className="bg-accent text-accent-foreground" onClick={() => diaper("popo", "Popó")} icon={<span className="text-3xl">💩</span>} label="Popó" />
           <BigBtn small className="bg-primary text-primary-foreground" onClick={() => diaper("ambos", "Ambos")} icon={<span className="text-3xl">💧💩</span>} label="Ambos" />
         </div>
       </Section>
@@ -79,9 +82,14 @@ function Index() {
       <section className="mt-6">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-extrabold">Historial de hoy</h2>
+          <div className="flex gap-2">
+          <button onClick={() => setModal("history")} className="flex items-center gap-1.5 rounded-full bg-card px-4 py-2 text-sm font-bold shadow-sm active:scale-95">
+            <CalendarPlus className="h-4 w-4" /> Pasado
+          </button>
           <button onClick={() => setModal("chart")} className="flex items-center gap-1.5 rounded-full bg-card px-4 py-2 text-sm font-bold shadow-sm active:scale-95">
             <BarChart3 className="h-4 w-4" /> Gráfica
           </button>
+          </div>
         </div>
         {today.length === 0 ? (
           <p className="rounded-2xl bg-card p-6 text-center text-muted-foreground">Aún no hay registros hoy.</p>
@@ -94,9 +102,7 @@ function Index() {
                   <p className="truncate font-bold">{desc(e)}</p>
                   <p className="text-sm text-muted-foreground">{hora(e.t)}</p>
                 </div>
-                <button aria-label="Eliminar registro" onClick={() => confirm("¿Eliminar este registro?") && setEntries((p) => p.filter((x) => x.id !== e.id))} className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-destructive active:bg-muted">
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <DelBtn onDel={() => setEntries((p) => p.filter((x) => x.id !== e.id))} />
               </li>
             ))}
           </ul>
@@ -105,17 +111,25 @@ function Index() {
 
       {modal === "bottle" && <BottleModal onClose={() => setModal(null)} onSave={(ml, milk) => { add({ id: uid(), t: Date.now(), kind: "bottle", ml, milk }, "Biberón registrado ✓"); setModal(null); }} />}
       {modal === "breast" && <BreastModal onClose={() => setModal(null)} onSave={(min) => { add({ id: uid(), t: Date.now(), kind: "breast", min }, "Toma de pecho registrada ✓"); setModal(null); }} />}
+      {modal === "pump" && <PumpModal onClose={() => setModal(null)} onSave={(ml) => { add({ id: uid(), t: Date.now(), kind: "pump", ml }, "Extracción registrada ✓"); setModal(null); }} />}
       {modal === "chart" && <ChartModal entries={entries} onClose={() => setModal(null)} />}
+      {modal === "history" && <HistoryModal entries={entries} onClose={() => setModal(null)}
+        onDel={(id) => setEntries((p) => p.filter((x) => x.id !== id))}
+        onAdd={(k, t) => { if (k === "pipi" || k === "ambos") add({ id: uid(), t, kind: "diaper", type: k }, "Pañal agregado ✓"); else { setPastT(t); setPast(k); } }} />}
+      {past === "bottle" && <BottleModal onClose={() => setPast(null)} onSave={(ml, milk) => { add({ id: uid(), t: pastT, kind: "bottle", ml, milk }, "Biberón agregado ✓"); setPast(null); }} />}
+      {past === "breast" && <BreastModal onClose={() => setPast(null)} onSave={(min) => { add({ id: uid(), t: pastT, kind: "breast", min }, "Toma de pecho agregada ✓"); setPast(null); }} />}
+      {past === "pump" && <PumpModal onClose={() => setPast(null)} onSave={(ml) => { add({ id: uid(), t: pastT, kind: "pump", ml }, "Extracción agregada ✓"); setPast(null); }} />}
 
-      {toast && <div className="fixed inset-x-0 bottom-6 mx-auto w-fit rounded-full bg-foreground px-5 py-3 font-bold text-background shadow-lg">{toast}</div>}
+      {toast && <div className="fixed inset-x-0 bottom-6 z-[70] mx-auto w-fit rounded-full bg-foreground px-5 py-3 font-bold text-background shadow-lg">{toast}</div>}
     </main>
   );
 }
 
-const icon = (e: Entry) => e.kind === "bottle" ? "🍼" : e.kind === "breast" ? "🤱" : e.type === "pipi" ? "💧" : e.type === "popo" ? "💩" : "🧷";
+const icon = (e: Entry) => e.kind === "bottle" ? "🍼" : e.kind === "breast" ? "🤱" : e.kind === "pump" ? "🫙" : e.type === "pipi" ? "💧" : e.type === "popo" ? "💩" : "🧷";
 const desc = (e: Entry) =>
   e.kind === "bottle" ? `Biberón · ${e.ml} ml · ${e.milk === "formula" ? "Fórmula" : "Leche materna"}`
   : e.kind === "breast" ? `Pecho · ${e.min} min`
+  : e.kind === "pump" ? `Extracción · ${e.ml} ml`
   : `Pañal · ${e.type === "pipi" ? "Pipí" : e.type === "popo" ? "Popó" : "Pipí y popó"}`;
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -132,7 +146,7 @@ function BigBtn({ icon, label, onClick, className, small }: { icon: React.ReactN
 
 function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/30" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end [&+&]:z-[60] justify-center bg-foreground/30" onClick={onClose}>
       <div className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-card p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-xl font-extrabold">{title}</h3>
@@ -164,17 +178,80 @@ function Stepper({ value, set, step, unit }: { value: number; set: (n: number) =
   );
 }
 
-function BottleModal({ onClose, onSave }: { onClose: () => void; onSave: (ml: number, milk: "formula" | "materna") => void }) {
+function useAmount() {
   const [unit, setUnit] = useState<"ml" | "oz">("ml");
   const [amount, setAmount] = useState(90);
-  const [milk, setMilk] = useState<"formula" | "materna">("formula");
   const changeUnit = (u: "ml" | "oz") => { if (u === unit) return; setAmount(u === "oz" ? Math.round(amount / 30) : amount * 30); setUnit(u); };
   const ml = unit === "ml" ? amount : Math.round(amount * 29.57);
+  const ui = <>
+    <Toggle value={unit} onChange={changeUnit} options={[["ml", "Mililitros"], ["oz", "Onzas"]]} />
+    <Stepper value={amount} set={setAmount} step={unit === "ml" ? 10 : 0.5} unit={unit === "ml" ? "ml" : "oz"} />
+  </>;
+  return { ml, amount, ui };
+}
+
+function DelBtn({ onDel }: { onDel: () => void }) {
+  return <button aria-label="Eliminar registro" onClick={() => confirm("¿Eliminar este registro?") && onDel()} className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-destructive active:bg-muted"><Trash2 className="h-4 w-4" /></button>;
+}
+
+function PumpModal({ onClose, onSave }: { onClose: () => void; onSave: (ml: number) => void }) {
+  const a = useAmount();
+  return (
+    <Sheet title="Extracción" onClose={onClose}>
+      <div className="space-y-5">
+        {a.ui}
+        <button disabled={a.amount <= 0} onClick={() => onSave(a.ml)} className="h-16 w-full rounded-2xl bg-secondary text-lg font-extrabold text-secondary-foreground disabled:opacity-50">Guardar extracción</button>
+      </div>
+    </Sheet>
+  );
+}
+
+const dayStart = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+const toInput = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+function HistoryModal({ entries, onClose, onAdd, onDel }: { entries: Entry[]; onClose: () => void; onAdd: (k: "bottle" | "breast" | "pump" | "pipi" | "ambos", t: number) => void; onDel: (id: string) => void }) {
+  const y = new Date(); y.setDate(y.getDate() - 1);
+  const [date, setDate] = useState(toInput(y));
+  const [time, setTime] = useState("12:00");
+  const [yy, mo, dd] = date.split("-").map(Number);
+  const [hh, mi] = time.split(":").map(Number);
+  const t = new Date(yy, mo - 1, dd, hh || 0, mi || 0).getTime();
+  const s = new Date(yy, mo - 1, dd).getTime();
+  const list = entries.filter((e) => e.t >= s && e.t < s + 86400000).sort((a, b) => a.t - b.t);
+  const btn = "rounded-2xl py-4 font-extrabold active:scale-95";
+  return (
+    <Sheet title="Llenar historial pasado" onClose={onClose}>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="text-sm font-bold">Fecha<input type="date" max={toInput(new Date())} value={date} onChange={(e) => e.target.value && setDate(e.target.value)} className="mt-1 h-12 w-full rounded-xl bg-muted px-3 text-base" /></label>
+        <label className="text-sm font-bold">Hora<input type="time" value={time} onChange={(e) => e.target.value && setTime(e.target.value)} className="mt-1 h-12 w-full rounded-xl bg-muted px-3 text-base" /></label>
+      </div>
+      <p className="mt-4 mb-2 text-sm font-extrabold uppercase tracking-wider text-muted-foreground">Agregar a esa hora</p>
+      <div className="grid grid-cols-3 gap-2">
+        <button onClick={() => onAdd("bottle", t)} className={`${btn} bg-primary text-primary-foreground`}>🍼 Biberón</button>
+        <button onClick={() => onAdd("breast", t)} className={`${btn} bg-accent text-accent-foreground`}>🤱 Pecho</button>
+        <button onClick={() => onAdd("pump", t)} className={`${btn} bg-secondary text-secondary-foreground`}>🫙 Extracción</button>
+        <button onClick={() => onAdd("pipi", t)} className={`${btn} bg-muted`}>💧 Pipí</button>
+        <button onClick={() => onAdd("ambos", t)} className={`${btn} bg-muted`}>🧷 Ambos</button>
+      </div>
+      <p className="mt-5 mb-2 text-sm font-extrabold uppercase tracking-wider text-muted-foreground">Registros de ese día</p>
+      {list.length === 0 ? <p className="rounded-2xl bg-muted/50 p-4 text-center text-muted-foreground">Sin registros.</p> :
+        <ul className="space-y-2">{list.map((e) => (
+          <li key={e.id} className="flex items-center gap-3 rounded-2xl bg-muted/50 p-2">
+            <span className="text-xl">{icon(e)}</span>
+            <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{desc(e)}</p><p className="text-xs text-muted-foreground">{hora(e.t)}</p></div>
+            <DelBtn onDel={() => onDel(e.id)} />
+          </li>))}</ul>}
+    </Sheet>
+  );
+}
+
+function BottleModal({ onClose, onSave }: { onClose: () => void; onSave: (ml: number, milk: "formula" | "materna") => void }) {
+  const a = useAmount(); const { ml, amount } = a;
+  const [milk, setMilk] = useState<"formula" | "materna">("formula");
   return (
     <Sheet title="Toma de Biberón" onClose={onClose}>
       <div className="space-y-5">
-        <Toggle value={unit} onChange={changeUnit} options={[["ml", "Mililitros"], ["oz", "Onzas"]]} />
-        <Stepper value={amount} set={setAmount} step={unit === "ml" ? 10 : 0.5} unit={unit === "ml" ? "ml" : "oz"} />
+        {a.ui}
         <Toggle value={milk} onChange={setMilk} options={[["formula", "🥛 Fórmula"], ["materna", "🤍 Leche materna"]]} />
         <button disabled={amount <= 0} onClick={() => onSave(ml, milk)} className="h-16 w-full rounded-2xl bg-primary text-lg font-extrabold text-primary-foreground disabled:opacity-50">Guardar toma</button>
       </div>
@@ -218,47 +295,96 @@ function BreastModal({ onClose, onSave }: { onClose: () => void; onSave: (min: n
   );
 }
 
+function summarize(list: Entry[]) {
+  const r = { formula: 0, materna: 0, bottles: 0, breastMin: 0, breasts: 0, pump: 0, pumps: 0, pipi: 0, ambos: 0 };
+  for (const e of list) {
+    if (e.kind === "bottle") { r.bottles++; r[e.milk] += e.ml; }
+    else if (e.kind === "breast") { r.breasts++; r.breastMin += e.min; }
+    else if (e.kind === "pump") { r.pumps++; r.pump += e.ml; }
+    else if (e.type === "pipi") r.pipi++; else r.ambos++;
+  }
+  return r;
+}
+
+function Stat({ label, value, sub, cls }: { label: string; value: string; sub?: string; cls: string }) {
+  return <div className={`rounded-2xl p-3 ${cls}`}><div className="text-sm font-bold">{label}</div><div className="text-2xl font-extrabold">{value}</div>{sub && <div className="text-xs font-medium opacity-80">{sub}</div>}</div>;
+}
+
 function ChartModal({ entries, onClose }: { entries: Entry[]; onClose: () => void }) {
+  const [mode, setMode] = useState<"day" | "week">("day");
   const [offset, setOffset] = useState(0);
-  const start = new Date(); start.setHours(0, 0, 0, 0);
-  const dow = (start.getDay() + 6) % 7; // lunes = 0
-  start.setDate(start.getDate() - dow - offset * 7);
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(start); d.setDate(d.getDate() + i);
-    const end = d.getTime() + 86400000;
-    const b = entries.filter((e): e is Extract<Entry, { kind: "bottle" }> => e.kind === "bottle" && e.t >= d.getTime() && e.t < end);
-    return {
-      label: d.toLocaleDateString("es", { weekday: "short" }).slice(0, 3),
-      formula: b.filter((x) => x.milk === "formula").reduce((s, x) => s + x.ml, 0),
-      materna: b.filter((x) => x.milk === "materna").reduce((s, x) => s + x.ml, 0),
-    };
-  });
-  const max = Math.max(100, ...days.flatMap((d) => [d.formula, d.materna]));
-  const totF = days.reduce((s, d) => s + d.formula, 0), totM = days.reduce((s, d) => s + d.materna, 0);
-  const endDate = new Date(start); endDate.setDate(endDate.getDate() + 6);
   const f = (d: Date) => d.toLocaleDateString("es", { day: "numeric", month: "short" });
+  const inRange = (a: number, b: number) => entries.filter((e) => e.t >= a && e.t < b);
+
+  let start = dayStart(new Date()), len = 1, title = "";
+  if (mode === "day") {
+    start.setDate(start.getDate() - offset);
+    title = offset === 0 ? "Hoy" : offset === 1 ? "Ayer" : start.toLocaleDateString("es", { weekday: "long" });
+  } else {
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7) - offset * 7); len = 7;
+    title = offset === 0 ? "Esta semana" : `Hace ${offset} sem.`;
+  }
+  const end = new Date(start); end.setDate(end.getDate() + len);
+  const list = inRange(start.getTime(), end.getTime()).sort((a, b) => a.t - b.t);
+  const sum = summarize(list);
+  const last = new Date(end.getTime() - 1);
+
+  // bars
+  const bars = mode === "week"
+    ? Array.from({ length: 7 }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); const s = summarize(inRange(d.getTime(), d.getTime() + 86400000)); return { label: d.toLocaleDateString("es", { weekday: "short" }).slice(0, 3), ...s }; })
+    : Array.from({ length: 8 }, (_, i) => { const a = start.getTime() + i * 3 * 3600000; const s = summarize(inRange(a, a + 3 * 3600000)); return { label: `${i * 3}h`, ...s }; });
+  const max = Math.max(60, ...bars.map((b) => Math.max(b.formula + b.materna, b.pump)));
+  const maxD = Math.max(1, ...bars.map((b) => b.pipi + b.ambos));
+
   return (
-    <Sheet title="Tomas por semana" onClose={onClose}>
+    <Sheet title="Gráfica y detalle" onClose={onClose}>
+      <div className="mb-4"><Toggle value={mode} onChange={(m) => { setMode(m); setOffset(0); }} options={[["day", "Por día"], ["week", "Por semana"]]} /></div>
       <div className="mb-4 flex items-center justify-between">
         <button onClick={() => setOffset(offset + 1)} className="h-11 w-11 rounded-full bg-muted text-xl font-extrabold">‹</button>
-        <div className="text-center font-bold">{offset === 0 ? "Esta semana" : `Hace ${offset} sem.`}<div className="text-sm font-medium text-muted-foreground">{f(start)} – {f(endDate)}</div></div>
+        <div className="text-center font-bold capitalize">{title}<div className="text-sm font-medium normal-case text-muted-foreground">{mode === "day" ? f(start) : `${f(start)} – ${f(last)}`}</div></div>
         <button disabled={offset === 0} onClick={() => setOffset(offset - 1)} className="h-11 w-11 rounded-full bg-muted text-xl font-extrabold disabled:opacity-30">›</button>
       </div>
-      <div className="flex h-48 items-end justify-between gap-1 rounded-2xl bg-muted/50 p-3">
-        {days.map((d, i) => (
-          <div key={i} className="flex flex-1 flex-col items-center gap-1">
-            <div className="flex h-36 items-end gap-0.5">
-              <div className="w-3 rounded-t-md bg-primary" style={{ height: `${(d.formula / max) * 100}%` }} />
-              <div className="w-3 rounded-t-md bg-secondary" style={{ height: `${(d.materna / max) * 100}%` }} />
+
+      <div className="rounded-2xl bg-muted/50 p-3">
+        <div className="flex h-40 items-end justify-between gap-1">
+          {bars.map((d, i) => (
+            <div key={i} className="flex flex-1 flex-col items-center gap-1">
+              <div className="flex h-32 items-end gap-0.5">
+                <div className="flex w-2.5 flex-col justify-end overflow-hidden rounded-t-md" style={{ height: `${((d.formula + d.materna) / max) * 100}%` }}>
+                  <div className="bg-secondary" style={{ height: `${d.formula + d.materna ? (d.materna / (d.formula + d.materna)) * 100 : 0}%` }} />
+                  <div className="flex-1 bg-primary" />
+                </div>
+                <div className="w-2.5 rounded-t-md bg-accent" style={{ height: `${(d.pump / max) * 100}%` }} />
+                <div className="w-2.5 rounded-t-md bg-foreground/25" style={{ height: `${((d.pipi + d.ambos) / maxD) * 100}%` }} />
+              </div>
+              <span className="text-[10px] font-bold capitalize text-muted-foreground">{d.label}</span>
             </div>
-            <span className="text-xs font-bold capitalize text-muted-foreground">{d.label}</span>
-          </div>
-        ))}
+          ))}
+        </div>
+        <div className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs font-bold text-muted-foreground">
+          <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded bg-primary" />Fórmula</span>
+          <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded bg-secondary" />Materna</span>
+          <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded bg-accent" />Extracción</span>
+          <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded bg-foreground/25" />Pañales</span>
+        </div>
       </div>
+
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-primary p-3 text-primary-foreground"><div className="text-sm font-bold">🥛 Fórmula</div><div className="text-2xl font-extrabold">{totF} ml</div></div>
-        <div className="rounded-2xl bg-secondary p-3 text-secondary-foreground"><div className="text-sm font-bold">🤍 Materna</div><div className="text-2xl font-extrabold">{totM} ml</div></div>
+        <Stat cls="bg-primary text-primary-foreground" label="🍼 Biberón" value={`${sum.formula + sum.materna} ml`} sub={`${sum.bottles} tomas · F ${sum.formula} / M ${sum.materna}`} />
+        <Stat cls="bg-accent text-accent-foreground" label="🤱 Pecho" value={`${sum.breastMin} min`} sub={`${sum.breasts} tomas`} />
+        <Stat cls="bg-secondary text-secondary-foreground" label="🫙 Extracción" value={`${sum.pump} ml`} sub={`${sum.pumps} extracciones`} />
+        <Stat cls="bg-muted" label="🧷 Pañales" value={`${sum.pipi + sum.ambos}`} sub={`${sum.pipi} pipí · ${sum.ambos} ambos`} />
       </div>
+      {mode === "week" && <p className="mt-2 text-center text-xs text-muted-foreground">Promedio diario biberón: {Math.round((sum.formula + sum.materna) / 7)} ml</p>}
+
+      <h4 className="mt-5 mb-2 text-sm font-extrabold uppercase tracking-wider text-muted-foreground">Detalle</h4>
+      {list.length === 0 ? <p className="rounded-2xl bg-muted/50 p-4 text-center text-muted-foreground">Sin registros.</p> :
+        <ul className="space-y-1.5">{list.map((e) => (
+          <li key={e.id} className="flex items-center gap-3 rounded-xl bg-muted/50 px-3 py-2">
+            <span className="text-lg">{icon(e)}</span>
+            <p className="min-w-0 flex-1 truncate text-sm font-bold">{desc(e)}</p>
+            <span className="shrink-0 text-xs text-muted-foreground">{mode === "week" && new Date(e.t).toLocaleDateString("es", { weekday: "short" }) + " "}{hora(e.t)}</span>
+          </li>))}</ul>}
     </Sheet>
   );
 }
