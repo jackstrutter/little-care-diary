@@ -1,0 +1,12 @@
+{
+  "name": "Mi Bebé — Control diario",
+  "short_name": "Mi Bebé",
+  "lang": "es",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f3ec",
+  "theme_color": "#bfe3dc",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
