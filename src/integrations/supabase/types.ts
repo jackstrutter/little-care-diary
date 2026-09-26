@@ -14,7 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      entries: {
+        Row: {
+          created_at: string
+          diaper_type: string | null
+          happened_at: string
+          id: string
+          kind: string
+          milk: string | null
+          mins: number | null
+          ml: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          diaper_type?: string | null
+          happened_at: string
+          id: string
+          kind: string
+          milk?: string | null
+          mins?: number | null
+          ml?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          diaper_type?: string | null
+          happened_at?: string
+          id?: string
+          kind?: string
+          milk?: string | null
+          mins?: number | null
+          ml?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
