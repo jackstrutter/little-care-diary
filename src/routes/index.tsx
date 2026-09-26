@@ -1,14 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Baby, Milk, Droplet, Trash2, BarChart3, X, Play, Pause, Timer, Sparkles, CalendarPlus } from "lucide-react";
+import { Baby, Milk, Droplet, BarChart3, Play, Pause, Timer, Sparkles, CalendarPlus, Settings, Cloud } from "lucide-react";
+import { BigBtn, DelBtn, Section, Sheet, Stat, Stepper, Toggle, useAmount } from "@/components/baby-ui";
+import { OptionsSheet } from "@/components/options-sheet";
+import { ImportSheet } from "@/components/import-sheet";
+import { useBabyEntries } from "@/lib/use-baby-entries";
+import { dayStart, desc, hora, icon, summarize, toInput, uid, type Entry } from "@/lib/baby";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Mi Bebé — Control diario de tomas y pañales" },
-      { name: "description", content: "Registra tomas de biberón, pecho y pañales de tu bebé con una sola mano." },
+      { name: "description", content: "Registra tomas de biberón, pecho, extracciones y pañales de tu bebé, con la misma cuenta en dos teléfonos." },
       { property: "og:title", content: "Mi Bebé — Control diario" },
-      { property: "og:description", content: "Registro rápido de tomas y pañales para padres." },
+      { property: "og:description", content: "Registro rápido de tomas y pañales para padres, sincronizado en la nube." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -16,52 +21,41 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-type Entry =
-  | { id: string; t: number; kind: "bottle"; ml: number; milk: "formula" | "materna" }
-  | { id: string; t: number; kind: "breast"; min: number }
-  | { id: string; t: number; kind: "pump"; ml: number }
-  | { id: string; t: number; kind: "diaper"; type: "pipi" | "popo" | "ambos" };
-
-const KEY = "mi-bebe-registros";
-const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-const hora = (t: number) => new Date(t).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
-
 function Index() {
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [loaded, setLoaded] = useState(false);
-  const [modal, setModal] = useState<null | "bottle" | "breast" | "pump" | "chart" | "history">(null);
+  const { entries, add, addMany, remove, session, syncing, cloud } = useBabyEntries();
+  const [modal, setModal] = useState<null | "bottle" | "breast" | "pump" | "chart" | "history" | "options" | "import">(null);
   const [past, setPast] = useState<null | "bottle" | "breast" | "pump">(null);
   const [pastT, setPastT] = useState<number>(0);
   const [toast, setToast] = useState("");
 
-  useEffect(() => {
-    try { setEntries(JSON.parse(localStorage.getItem(KEY) || "[]")); } catch {}
-    setLoaded(true);
-  }, []);
-  useEffect(() => { if (loaded) localStorage.setItem(KEY, JSON.stringify(entries)); }, [entries, loaded]);
-
-  const add = (e: Entry, msg: string) => {
-    setEntries((p) => [e, ...p]);
+  const save = (e: Entry, msg: string) => {
+    add(e);
     setToast(msg);
     setTimeout(() => setToast(""), 1600);
   };
 
   const today = useMemo(() => {
-    const s = new Date(); s.setHours(0, 0, 0, 0);
-    return entries.filter((e) => e.t >= s.getTime()).sort((a, b) => b.t - a.t);
+    const s = dayStart(new Date()).getTime();
+    return entries.filter((e) => e.t >= s).sort((a, b) => b.t - a.t);
   }, [entries]);
 
-  const diaper = (type: "pipi" | "popo" | "ambos", label: string) =>
-    add({ id: uid(), t: Date.now(), kind: "diaper", type }, `Pañal: ${label} ✓`);
+  const diaper = (type: "pipi" | "ambos", label: string) =>
+    save({ id: uid(), t: Date.now(), kind: "diaper", type }, `Pañal: ${label} ✓`);
 
   return (
     <main className="mx-auto min-h-dvh max-w-md px-4 pb-10 pt-[max(1rem,env(safe-area-inset-top))]">
       <header className="mb-4 flex items-center gap-3">
         <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-secondary"><Baby className="h-6 w-6" /></div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-extrabold">Mi Bebé</h1>
-          <p className="text-sm capitalize text-muted-foreground">{new Date().toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" })}</p>
+          <p className="flex items-center gap-1 text-sm capitalize text-muted-foreground">
+            {new Date().toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" })}
+            {cloud && <Cloud className="h-3.5 w-3.5 shrink-0" />}
+          </p>
         </div>
+        <button aria-label="Opciones" onClick={() => setModal("options")} className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-card shadow-sm active:scale-95">
+          <Settings className="h-5 w-5" />
+        </button>
       </header>
 
       <Section title="Tomas">
@@ -83,12 +77,12 @@ function Index() {
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-extrabold">Historial de hoy</h2>
           <div className="flex gap-2">
-          <button onClick={() => setModal("history")} className="flex items-center gap-1.5 rounded-full bg-card px-4 py-2 text-sm font-bold shadow-sm active:scale-95">
-            <CalendarPlus className="h-4 w-4" /> Pasado
-          </button>
-          <button onClick={() => setModal("chart")} className="flex items-center gap-1.5 rounded-full bg-card px-4 py-2 text-sm font-bold shadow-sm active:scale-95">
-            <BarChart3 className="h-4 w-4" /> Gráfica
-          </button>
+            <button onClick={() => setModal("history")} className="flex items-center gap-1.5 rounded-full bg-card px-4 py-2 text-sm font-bold shadow-sm active:scale-95">
+              <CalendarPlus className="h-4 w-4" /> Pasado
+            </button>
+            <button onClick={() => setModal("chart")} className="flex items-center gap-1.5 rounded-full bg-card px-4 py-2 text-sm font-bold shadow-sm active:scale-95">
+              <BarChart3 className="h-4 w-4" /> Gráfica
+            </button>
           </div>
         </div>
         {today.length === 0 ? (
@@ -102,96 +96,34 @@ function Index() {
                   <p className="truncate font-bold">{desc(e)}</p>
                   <p className="text-sm text-muted-foreground">{hora(e.t)}</p>
                 </div>
-                <DelBtn onDel={() => setEntries((p) => p.filter((x) => x.id !== e.id))} />
+                <DelBtn onDel={() => remove(e.id)} />
               </li>
             ))}
           </ul>
         )}
       </section>
 
-      {modal === "bottle" && <BottleModal onClose={() => setModal(null)} onSave={(ml, milk) => { add({ id: uid(), t: Date.now(), kind: "bottle", ml, milk }, "Biberón registrado ✓"); setModal(null); }} />}
-      {modal === "breast" && <BreastModal onClose={() => setModal(null)} onSave={(min) => { add({ id: uid(), t: Date.now(), kind: "breast", min }, "Toma de pecho registrada ✓"); setModal(null); }} />}
-      {modal === "pump" && <PumpModal onClose={() => setModal(null)} onSave={(ml) => { add({ id: uid(), t: Date.now(), kind: "pump", ml }, "Extracción registrada ✓"); setModal(null); }} />}
+      {modal === "options" && <OptionsSheet session={session} syncing={syncing} onClose={() => setModal(null)} onImport={() => setModal("import")} />}
+      {modal === "import" && <ImportSheet onClose={() => setModal(null)} onSave={async (list) => {
+        await addMany(list);
+        setModal(null);
+        setToast(`${list.length} registros agregados ✓`);
+        setTimeout(() => setToast(""), 1600);
+      }} />}
+      {modal === "bottle" && <BottleModal onClose={() => setModal(null)} onSave={(ml, milk) => { save({ id: uid(), t: Date.now(), kind: "bottle", ml, milk }, "Biberón registrado ✓"); setModal(null); }} />}
+      {modal === "breast" && <BreastModal onClose={() => setModal(null)} onSave={(min) => { save({ id: uid(), t: Date.now(), kind: "breast", min }, "Toma de pecho registrada ✓"); setModal(null); }} />}
+      {modal === "pump" && <PumpModal onClose={() => setModal(null)} onSave={(ml) => { save({ id: uid(), t: Date.now(), kind: "pump", ml }, "Extracción registrada ✓"); setModal(null); }} />}
       {modal === "chart" && <ChartModal entries={entries} onClose={() => setModal(null)} />}
       {modal === "history" && <HistoryModal entries={entries} onClose={() => setModal(null)}
-        onDel={(id) => setEntries((p) => p.filter((x) => x.id !== id))}
-        onAdd={(k, t) => { if (k === "pipi" || k === "ambos") add({ id: uid(), t, kind: "diaper", type: k }, "Pañal agregado ✓"); else { setPastT(t); setPast(k); } }} />}
-      {past === "bottle" && <BottleModal onClose={() => setPast(null)} onSave={(ml, milk) => { add({ id: uid(), t: pastT, kind: "bottle", ml, milk }, "Biberón agregado ✓"); setPast(null); }} />}
-      {past === "breast" && <BreastModal onClose={() => setPast(null)} onSave={(min) => { add({ id: uid(), t: pastT, kind: "breast", min }, "Toma de pecho agregada ✓"); setPast(null); }} />}
-      {past === "pump" && <PumpModal onClose={() => setPast(null)} onSave={(ml) => { add({ id: uid(), t: pastT, kind: "pump", ml }, "Extracción agregada ✓"); setPast(null); }} />}
+        onDel={remove}
+        onAdd={(k, t) => { if (k === "pipi" || k === "ambos") save({ id: uid(), t, kind: "diaper", type: k }, "Pañal agregado ✓"); else { setPastT(t); setPast(k); } }} />}
+      {past === "bottle" && <BottleModal onClose={() => setPast(null)} onSave={(ml, milk) => { save({ id: uid(), t: pastT, kind: "bottle", ml, milk }, "Biberón agregado ✓"); setPast(null); }} />}
+      {past === "breast" && <BreastModal onClose={() => setPast(null)} onSave={(min) => { save({ id: uid(), t: pastT, kind: "breast", min }, "Toma de pecho agregada ✓"); setPast(null); }} />}
+      {past === "pump" && <PumpModal onClose={() => setPast(null)} onSave={(ml) => { save({ id: uid(), t: pastT, kind: "pump", ml }, "Extracción agregada ✓"); setPast(null); }} />}
 
       {toast && <div className="fixed inset-x-0 bottom-6 z-[70] mx-auto w-fit rounded-full bg-foreground px-5 py-3 font-bold text-background shadow-lg">{toast}</div>}
     </main>
   );
-}
-
-const icon = (e: Entry) => e.kind === "bottle" ? "🍼" : e.kind === "breast" ? "🤱" : e.kind === "pump" ? "🫙" : e.type === "pipi" ? "💧" : e.type === "popo" ? "💩" : "🧷";
-const desc = (e: Entry) =>
-  e.kind === "bottle" ? `Biberón · ${e.ml} ml · ${e.milk === "formula" ? "Fórmula" : "Leche materna"}`
-  : e.kind === "breast" ? `Pecho · ${e.min} min`
-  : e.kind === "pump" ? `Extracción · ${e.ml} ml`
-  : `Pañal · ${e.type === "pipi" ? "Pipí" : e.type === "popo" ? "Popó" : "Pipí y popó"}`;
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return <section className="mt-4"><h2 className="mb-2 text-sm font-extrabold uppercase tracking-wider text-muted-foreground">{title}</h2>{children}</section>;
-}
-
-function BigBtn({ icon, label, onClick, className, small }: { icon: React.ReactNode; label: string; onClick: () => void; className: string; small?: boolean }) {
-  return (
-    <button onClick={onClick} className={`flex flex-col items-center justify-center gap-2 rounded-3xl font-extrabold shadow-sm transition active:scale-95 ${small ? "h-28 text-base" : "h-36 text-lg"} ${className}`}>
-      {icon}<span className="leading-tight">{label}</span>
-    </button>
-  );
-}
-
-function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/30" onClick={onClose}>
-      <div className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-card p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-xl font-extrabold">{title}</h3>
-          <button aria-label="Cerrar" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full bg-muted"><X className="h-5 w-5" /></button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function Toggle<T extends string>({ value, options, onChange }: { value: T; options: [T, string][]; onChange: (v: T) => void }) {
-  return (
-    <div className="grid grid-cols-2 gap-2 rounded-2xl bg-muted p-1">
-      {options.map(([v, l]) => (
-        <button key={v} onClick={() => onChange(v)} className={`rounded-xl py-3 font-bold ${value === v ? "bg-card shadow-sm" : "text-muted-foreground"}`}>{l}</button>
-      ))}
-    </div>
-  );
-}
-
-function Stepper({ value, set, step, unit }: { value: number; set: (n: number) => void; step: number; unit: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <button onClick={() => set(Math.max(0, value - step))} className="h-16 w-16 rounded-2xl bg-muted text-3xl font-extrabold active:scale-95">−</button>
-      <div className="text-center"><div className="text-5xl font-extrabold">{value}</div><div className="text-muted-foreground">{unit}</div></div>
-      <button onClick={() => set(value + step)} className="h-16 w-16 rounded-2xl bg-muted text-3xl font-extrabold active:scale-95">+</button>
-    </div>
-  );
-}
-
-function useAmount() {
-  const [unit, setUnit] = useState<"ml" | "oz">("ml");
-  const [amount, setAmount] = useState(90);
-  const changeUnit = (u: "ml" | "oz") => { if (u === unit) return; setAmount(u === "oz" ? Math.round(amount / 30) : amount * 30); setUnit(u); };
-  const ml = unit === "ml" ? amount : Math.round(amount * 29.57);
-  const ui = <>
-    <Toggle value={unit} onChange={changeUnit} options={[["ml", "Mililitros"], ["oz", "Onzas"]]} />
-    <Stepper value={amount} set={setAmount} step={unit === "ml" ? 10 : 0.5} unit={unit === "ml" ? "ml" : "oz"} />
-  </>;
-  return { ml, amount, ui };
-}
-
-function DelBtn({ onDel }: { onDel: () => void }) {
-  return <button aria-label="Eliminar registro" onClick={() => confirm("¿Eliminar este registro?") && onDel()} className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-destructive active:bg-muted"><Trash2 className="h-4 w-4" /></button>;
 }
 
 function PumpModal({ onClose, onSave }: { onClose: () => void; onSave: (ml: number) => void }) {
@@ -205,9 +137,6 @@ function PumpModal({ onClose, onSave }: { onClose: () => void; onSave: (ml: numb
     </Sheet>
   );
 }
-
-const dayStart = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
-const toInput = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 function HistoryModal({ entries, onClose, onAdd, onDel }: { entries: Entry[]; onClose: () => void; onAdd: (k: "bottle" | "breast" | "pump" | "pipi" | "ambos", t: number) => void; onDel: (id: string) => void }) {
   const y = new Date(); y.setDate(y.getDate() - 1);
@@ -295,28 +224,14 @@ function BreastModal({ onClose, onSave }: { onClose: () => void; onSave: (min: n
   );
 }
 
-function summarize(list: Entry[]) {
-  const r = { formula: 0, materna: 0, bottles: 0, breastMin: 0, breasts: 0, pump: 0, pumps: 0, pipi: 0, ambos: 0 };
-  for (const e of list) {
-    if (e.kind === "bottle") { r.bottles++; r[e.milk] += e.ml; }
-    else if (e.kind === "breast") { r.breasts++; r.breastMin += e.min; }
-    else if (e.kind === "pump") { r.pumps++; r.pump += e.ml; }
-    else if (e.type === "pipi") r.pipi++; else r.ambos++;
-  }
-  return r;
-}
-
-function Stat({ label, value, sub, cls }: { label: string; value: string; sub?: string; cls: string }) {
-  return <div className={`rounded-2xl p-3 ${cls}`}><div className="text-sm font-bold">{label}</div><div className="text-2xl font-extrabold">{value}</div>{sub && <div className="text-xs font-medium opacity-80">{sub}</div>}</div>;
-}
-
 function ChartModal({ entries, onClose }: { entries: Entry[]; onClose: () => void }) {
   const [mode, setMode] = useState<"day" | "week">("day");
   const [offset, setOffset] = useState(0);
   const f = (d: Date) => d.toLocaleDateString("es", { day: "numeric", month: "short" });
   const inRange = (a: number, b: number) => entries.filter((e) => e.t >= a && e.t < b);
 
-  let start = dayStart(new Date()), len = 1, title = "";
+  const start = dayStart(new Date());
+  let len = 1, title = "";
   if (mode === "day") {
     start.setDate(start.getDate() - offset);
     title = offset === 0 ? "Hoy" : offset === 1 ? "Ayer" : start.toLocaleDateString("es", { weekday: "long" });
@@ -329,7 +244,6 @@ function ChartModal({ entries, onClose }: { entries: Entry[]; onClose: () => voi
   const sum = summarize(list);
   const last = new Date(end.getTime() - 1);
 
-  // bars
   const bars = mode === "week"
     ? Array.from({ length: 7 }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); const s = summarize(inRange(d.getTime(), d.getTime() + 86400000)); return { label: d.toLocaleDateString("es", { weekday: "short" }).slice(0, 3), ...s }; })
     : Array.from({ length: 8 }, (_, i) => { const a = start.getTime() + i * 3 * 3600000; const s = summarize(inRange(a, a + 3 * 3600000)); return { label: `${i * 3}h`, ...s }; });
