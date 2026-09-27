@@ -288,19 +288,19 @@ function ChartModal({ entries, onClose }: { entries: Entry[]; onClose: () => voi
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <Stat cls="bg-primary text-primary-foreground" label="🍼 Biberón" value={`${sum.formula + sum.materna} ml`} sub={`${sum.bottles} tomas · F ${sum.formula} / M ${sum.materna}`} />
+        <Stat cls="bg-primary text-primary-foreground" label="🍼 Biberón" value={fmtMl(sum.formula + sum.materna, unit)} sub={`${sum.bottles} tomas · F ${fmtMl(sum.formula, unit)} / M ${fmtMl(sum.materna, unit)}`} />
         <Stat cls="bg-accent text-accent-foreground" label="🤱 Pecho" value={`${sum.breastMin} min`} sub={`${sum.breasts} tomas`} />
-        <Stat cls="bg-secondary text-secondary-foreground" label="🫙 Extracción" value={`${sum.pump} ml`} sub={`${sum.pumps} extracciones`} />
+        <Stat cls="bg-secondary text-secondary-foreground" label="🫙 Extracción" value={fmtMl(sum.pump, unit)} sub={`${sum.pumps} extracciones`} />
         <Stat cls="bg-muted" label="🧷 Pañales" value={`${sum.pipi + sum.ambos}`} sub={`${sum.pipi} pipí · ${sum.ambos} ambos`} />
       </div>
-      {mode === "week" && <p className="mt-2 text-center text-xs text-muted-foreground">Promedio diario biberón: {Math.round((sum.formula + sum.materna) / 7)} ml</p>}
+      {mode === "week" && <p className="mt-2 text-center text-xs text-muted-foreground">Promedio diario biberón: {fmtMl(Math.round((sum.formula + sum.materna) / 7), unit)}</p>}
 
       <h4 className="mt-5 mb-2 text-sm font-extrabold uppercase tracking-wider text-muted-foreground">Detalle</h4>
       {list.length === 0 ? <p className="rounded-2xl bg-muted/50 p-4 text-center text-muted-foreground">Sin registros.</p> :
         <ul className="space-y-1.5">{list.map((e) => (
           <li key={e.id} className="flex items-center gap-3 rounded-xl bg-muted/50 px-3 py-2">
             <span className="text-lg">{icon(e)}</span>
-            <p className="min-w-0 flex-1 truncate text-sm font-bold">{desc(e)}</p>
+            <p className="min-w-0 flex-1 truncate text-sm font-bold">{desc(e, unit)}</p>
             <span className="shrink-0 text-xs text-muted-foreground">{mode === "week" && new Date(e.t).toLocaleDateString("es", { weekday: "short" }) + " "}{hora(e.t)}</span>
           </li>))}</ul>}
     </Sheet>
