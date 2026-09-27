@@ -6,7 +6,12 @@ export type Entry =
 
 export const KEY = "mi-bebe-registros";
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-export const hora = (t: number) => new Date(t).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+export const hora = (t: number) => {
+  const d = new Date(t);
+  const h24 = d.getHours();
+  const h = h24 % 12 || 12;
+  return `${h}:${String(d.getMinutes()).padStart(2, "0")} ${h24 < 12 ? "am" : "pm"}`;
+};
 export const dayStart = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
 export const toInput = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -15,10 +20,13 @@ export const icon = (e: Entry) =>
   e.kind === "bottle" ? "🍼" : e.kind === "breast" ? "🤱" : e.kind === "pump" ? "🫙"
   : e.type === "pipi" ? "💧" : e.type === "popo" ? "💩" : "🧷";
 
-export const desc = (e: Entry) =>
-  e.kind === "bottle" ? `Biberón · ${e.ml} ml · ${e.milk === "formula" ? "Fórmula" : "Leche materna"}`
+export const fmtMl = (ml: number, unit: "ml" | "oz") =>
+  unit === "ml" ? `${ml} ml` : `${(ml / 29.57).toFixed(1).replace(/\.0$/, "")} oz`;
+
+export const desc = (e: Entry, unit: "ml" | "oz" = "ml") =>
+  e.kind === "bottle" ? `Biberón · ${fmtMl(e.ml, unit)} · ${e.milk === "formula" ? "Fórmula" : "Leche materna"}`
   : e.kind === "breast" ? `Pecho · ${e.min} min`
-  : e.kind === "pump" ? `Extracción · ${e.ml} ml`
+  : e.kind === "pump" ? `Extracción · ${fmtMl(e.ml, unit)}`
   : `Pañal · ${e.type === "pipi" ? "Pipí" : e.type === "popo" ? "Popó" : "Pipí y popó"}`;
 
 export function summarize(list: Entry[]) {
