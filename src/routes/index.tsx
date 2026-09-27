@@ -5,7 +5,7 @@ import { BigBtn, DelBtn, Section, Sheet, Stat, Stepper, Toggle, useAmount } from
 import { OptionsSheet } from "@/components/options-sheet";
 import { ImportSheet } from "@/components/import-sheet";
 import { useBabyEntries } from "@/lib/use-baby-entries";
-import { dayStart, desc, hora, icon, summarize, toInput, uid, type Entry } from "@/lib/baby";
+import { dayStart, desc, fmtMl, hora, icon, summarize, toInput, uid, type Entry } from "@/lib/baby";
 
 export const Route = createFileRoute("/")({
   head: () => ({
