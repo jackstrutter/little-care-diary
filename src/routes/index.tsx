@@ -253,7 +253,10 @@ function ChartModal({ entries, onClose }: { entries: Entry[]; onClose: () => voi
 
   return (
     <Sheet title="Gráfica y detalle" onClose={onClose}>
-      <div className="mb-4"><Toggle value={mode} onChange={(m) => { setMode(m); setOffset(0); }} options={[["day", "Por día"], ["week", "Por semana"]]} /></div>
+      <div className="mb-4 flex items-center gap-2">
+        <div className="flex-1"><Toggle value={mode} onChange={(m) => { setMode(m); setOffset(0); }} options={[["day", "Por día"], ["week", "Por semana"]]} /></div>
+        <button aria-label="Cambiar unidad" title="Cambiar entre mililitros y onzas" onClick={() => setUnit(unit === "ml" ? "oz" : "ml")} className="h-11 shrink-0 rounded-xl bg-muted px-4 text-sm font-extrabold uppercase">{unit}</button>
+      </div>
       <div className="mb-4 flex items-center justify-between">
         <button onClick={() => setOffset(offset + 1)} className="h-11 w-11 rounded-full bg-muted text-xl font-extrabold">‹</button>
         <div className="text-center font-bold capitalize">{title}<div className="text-sm font-medium normal-case text-muted-foreground">{mode === "day" ? f(start) : `${f(start)} – ${f(last)}`}</div></div>
