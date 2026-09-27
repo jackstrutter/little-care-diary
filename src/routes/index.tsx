@@ -227,6 +227,7 @@ function BreastModal({ onClose, onSave }: { onClose: () => void; onSave: (min: n
 function ChartModal({ entries, onClose }: { entries: Entry[]; onClose: () => void }) {
   const [mode, setMode] = useState<"day" | "week">("day");
   const [offset, setOffset] = useState(0);
+  const [unit, setUnit] = useState<"ml" | "oz">("ml");
   const f = (d: Date) => d.toLocaleDateString("es", { day: "numeric", month: "short" });
   const inRange = (a: number, b: number) => entries.filter((e) => e.t >= a && e.t < b);
 
