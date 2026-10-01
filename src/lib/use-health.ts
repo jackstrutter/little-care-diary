@@ -3,15 +3,16 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type HealthRecord =
   | { id: string; t: number; kind: "measure"; kg: number | null; cm: number | null }
-  | { id: string; t: number; kind: "appointment"; note: string };
+  | { id: string; t: number; kind: "appointment"; note: string }
+  | { id: string; t: number; kind: "profile"; note: string };
 
 const KEY = "mi-bebe-salud";
 type Row = { id: string; happened_at: string; kind: string; weight_kg: number | null; height_cm: number | null; note: string | null };
 
 const toRec = (r: Row): HealthRecord => {
   const t = new Date(r.happened_at).getTime();
-  return r.kind === "appointment"
-    ? { id: r.id, t, kind: "appointment", note: r.note ?? "" }
+  return r.kind === "appointment" || r.kind === "profile"
+    ? { id: r.id, t, kind: r.kind, note: r.note ?? "" }
     : { id: r.id, t, kind: "measure", kg: r.weight_kg != null ? Number(r.weight_kg) : null, cm: r.height_cm != null ? Number(r.height_cm) : null };
 };
 
@@ -41,7 +42,7 @@ export function useHealth(userId: string | null) {
       id: r.id, user_id: userId, kind: r.kind, happened_at: new Date(r.t).toISOString(),
       weight_kg: r.kind === "measure" ? r.kg : null,
       height_cm: r.kind === "measure" ? r.cm : null,
-      note: r.kind === "appointment" ? r.note : null,
+      note: r.kind !== "measure" ? r.note : null,
     });
     if (error) setError("No se pudo guardar en la nube. Intenta de nuevo.");
   };

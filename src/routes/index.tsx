@@ -5,6 +5,7 @@ import { BigBtn, DelBtn, Section, Sheet, Stat, Stepper, Toggle, useAmount } from
 import { OptionsSheet } from "@/components/options-sheet";
 import { ImportSheet } from "@/components/import-sheet";
 import { HealthSheet } from "@/components/health-sheet";
+import { GrowthView } from "@/components/growth-view";
 import { useBabyEntries } from "@/lib/use-baby-entries";
 import { dayStart, desc, fmtMl, hora, icon, summarize, toInput, uid, type Entry } from "@/lib/baby";
 
@@ -40,6 +41,11 @@ function Index() {
     return entries.filter((e) => e.t >= s).sort((a, b) => b.t - a.t);
   }, [entries]);
 
+  const [tab, setTab] = useState<"diario" | "crecimiento">("diario");
+  const sum = useMemo(() => summarize(today), [today]);
+  const oz = (ml: number) => `${(ml / 29.57).toFixed(1).replace(/\.0$/, "")} oz`;
+  const bottleMl = sum.formula + sum.materna;
+
   const diaper = (type: "pipi" | "popo", label: string) =>
     save({ id: uid(), t: Date.now(), kind: "diaper", type }, `Pañal: ${label} ✓`);
 
@@ -59,18 +65,21 @@ function Index() {
         </button>
       </header>
 
+      <div className="mb-2"><Toggle value={tab} onChange={setTab} options={[["diario", "🍼 Diario"], ["crecimiento", "📈 Crecimiento"]]} /></div>
+
+      {tab === "crecimiento" ? <GrowthView userId={session?.user.id ?? null} /> : <>
       <Section title="Tomas">
         <div className="grid grid-cols-2 gap-3">
-          <BigBtn className="bg-primary text-primary-foreground" onClick={() => setModal("bottle")} icon={<Milk className="h-9 w-9" />} label="Toma de Biberón" />
-          <BigBtn className="bg-accent text-accent-foreground" onClick={() => setModal("breast")} icon={<Sparkles className="h-9 w-9" />} label="Toma de Pecho" />
-          <div className="col-span-2"><BigBtn small className="w-full bg-secondary text-secondary-foreground" onClick={() => setModal("pump")} icon={<span className="text-3xl">🫙</span>} label="Extracción" /></div>
+          <BigBtn className="bg-primary text-primary-foreground" onClick={() => setModal("bottle")} icon={<Milk className="h-9 w-9" />} label="Toma de Biberón" sub={`Hoy: ${bottleMl} ml (${oz(bottleMl)}) · ${sum.bottles}`} />
+          <BigBtn className="bg-accent text-accent-foreground" onClick={() => setModal("breast")} icon={<Sparkles className="h-9 w-9" />} label="Toma de Pecho" sub={`Hoy: ${sum.breastMin} min · ${sum.breasts}`} />
+          <div className="col-span-2"><BigBtn small className="w-full bg-secondary text-secondary-foreground" onClick={() => setModal("pump")} icon={<span className="text-3xl">🫙</span>} label="Extracción" sub={`Hoy: ${sum.pump} ml (${oz(sum.pump)}) · ${sum.pumps}`} /></div>
         </div>
       </Section>
 
       <Section title="Pañales">
         <div className="grid grid-cols-2 gap-3">
-          <BigBtn small className="bg-secondary text-secondary-foreground" onClick={() => diaper("pipi", "Pipí")} icon={<Droplet className="h-8 w-8" />} label="Pipí" />
-          <BigBtn small className="bg-primary text-primary-foreground" onClick={() => diaper("popo", "Popó")} icon={<span className="text-3xl">💩</span>} label="Popó" />
+          <BigBtn small className="bg-secondary text-secondary-foreground" onClick={() => diaper("pipi", "Pipí")} icon={<Droplet className="h-8 w-8" />} label="Pipí" sub={`Hoy: ${sum.pipi}`} />
+          <BigBtn small className="bg-primary text-primary-foreground" onClick={() => diaper("popo", "Popó")} icon={<span className="text-3xl">💩</span>} label="Popó" sub={`Hoy: ${sum.ambos}`} />
         </div>
       </Section>
 
@@ -103,6 +112,7 @@ function Index() {
           </ul>
         )}
       </section>
+      </>}
 
       {modal === "options" && <OptionsSheet session={session} syncing={syncing} onClose={() => setModal(null)} onImport={() => setModal("import")} onHealth={() => setModal("health")} />}
       {modal === "health" && <HealthSheet userId={session?.user.id ?? null} onClose={() => setModal(null)} />}

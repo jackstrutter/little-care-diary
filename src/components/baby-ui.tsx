@@ -5,10 +5,10 @@ export function Section({ title, children }: { title: string; children: React.Re
   return <section className="mt-4"><h2 className="mb-2 text-sm font-extrabold uppercase tracking-wider text-muted-foreground">{title}</h2>{children}</section>;
 }
 
-export function BigBtn({ icon, label, onClick, className, small }: { icon: React.ReactNode; label: string; onClick: () => void; className: string; small?: boolean }) {
+export function BigBtn({ icon, label, onClick, className, small, sub }: { icon: React.ReactNode; label: string; sub?: string; onClick: () => void; className: string; small?: boolean }) {
   return (
     <button onClick={onClick} className={`flex flex-col items-center justify-center gap-2 rounded-3xl font-extrabold shadow-sm transition active:scale-95 ${small ? "h-28 text-base" : "h-36 text-lg"} ${className}`}>
-      {icon}<span className="leading-tight">{label}</span>
+      {icon}<span className="leading-tight">{label}</span>{sub && <span className="-mt-1 px-2 text-xs font-semibold opacity-75">{sub}</span>}
     </button>
   );
 }
