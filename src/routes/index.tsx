@@ -4,6 +4,7 @@ import { Baby, Milk, Droplet, BarChart3, Play, Pause, Timer, Sparkles, CalendarP
 import { BigBtn, DelBtn, Section, Sheet, Stat, Stepper, Toggle, useAmount } from "@/components/baby-ui";
 import { OptionsSheet } from "@/components/options-sheet";
 import { ImportSheet } from "@/components/import-sheet";
+import { HealthSheet } from "@/components/health-sheet";
 import { useBabyEntries } from "@/lib/use-baby-entries";
 import { dayStart, desc, fmtMl, hora, icon, summarize, toInput, uid, type Entry } from "@/lib/baby";
 
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const { entries, add, addMany, remove, session, syncing, cloud } = useBabyEntries();
-  const [modal, setModal] = useState<null | "bottle" | "breast" | "pump" | "chart" | "history" | "options" | "import">(null);
+  const [modal, setModal] = useState<null | "bottle" | "breast" | "pump" | "chart" | "history" | "options" | "import" | "health">(null);
   const [past, setPast] = useState<null | "bottle" | "breast" | "pump">(null);
   const [pastT, setPastT] = useState<number>(0);
   const [toast, setToast] = useState("");
@@ -103,7 +104,8 @@ function Index() {
         )}
       </section>
 
-      {modal === "options" && <OptionsSheet session={session} syncing={syncing} onClose={() => setModal(null)} onImport={() => setModal("import")} />}
+      {modal === "options" && <OptionsSheet session={session} syncing={syncing} onClose={() => setModal(null)} onImport={() => setModal("import")} onHealth={() => setModal("health")} />}
+      {modal === "health" && <HealthSheet userId={session?.user.id ?? null} onClose={() => setModal(null)} />}
       {modal === "import" && <ImportSheet onClose={() => setModal(null)} onSave={async (list) => {
         await addMany(list);
         setModal(null);

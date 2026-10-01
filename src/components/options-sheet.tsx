@@ -1,15 +1,16 @@
 import { useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { Cloud, CloudOff, FileText, LogOut } from "lucide-react";
+import { Cloud, CloudOff, FileText, LogOut, Ruler } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Sheet } from "./baby-ui";
 
-export function OptionsSheet({ session, syncing, onClose, onImport }: {
+export function OptionsSheet({ session, syncing, onClose, onImport, onHealth }: {
   session: Session | null;
   syncing: boolean;
   onClose: () => void;
   onImport: () => void;
+  onHealth: () => void;
 }) {
   const [mode, setMode] = useState<"in" | "up">("in");
   const [email, setEmail] = useState("");
@@ -88,6 +89,10 @@ export function OptionsSheet({ session, syncing, onClose, onImport }: {
         )}
 
         {msg && <p className="rounded-2xl bg-muted p-3 text-sm font-bold">{msg}</p>}
+
+        <button onClick={onHealth} className="flex h-16 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-lg font-extrabold text-primary-foreground active:scale-95">
+          <Ruler className="h-5 w-5" /> Peso, talla y citas
+        </button>
 
         <button onClick={onImport} className="flex h-16 w-full items-center justify-center gap-2 rounded-2xl bg-secondary text-lg font-extrabold text-secondary-foreground active:scale-95">
           <FileText className="h-5 w-5" /> Cargar historial escrito
