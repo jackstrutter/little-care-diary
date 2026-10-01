@@ -39,7 +39,7 @@ function Index() {
     return entries.filter((e) => e.t >= s).sort((a, b) => b.t - a.t);
   }, [entries]);
 
-  const diaper = (type: "pipi" | "ambos", label: string) =>
+  const diaper = (type: "pipi" | "popo", label: string) =>
     save({ id: uid(), t: Date.now(), kind: "diaper", type }, `Pañal: ${label} ✓`);
 
   return (
@@ -69,7 +69,7 @@ function Index() {
       <Section title="Pañales">
         <div className="grid grid-cols-2 gap-3">
           <BigBtn small className="bg-secondary text-secondary-foreground" onClick={() => diaper("pipi", "Pipí")} icon={<Droplet className="h-8 w-8" />} label="Pipí" />
-          <BigBtn small className="bg-primary text-primary-foreground" onClick={() => diaper("ambos", "Ambos")} icon={<span className="text-3xl">💧💩</span>} label="Ambos" />
+          <BigBtn small className="bg-primary text-primary-foreground" onClick={() => diaper("popo", "Popó")} icon={<span className="text-3xl">💩</span>} label="Popó" />
         </div>
       </Section>
 
@@ -116,7 +116,7 @@ function Index() {
       {modal === "chart" && <ChartModal entries={entries} onClose={() => setModal(null)} />}
       {modal === "history" && <HistoryModal entries={entries} onClose={() => setModal(null)}
         onDel={remove}
-        onAdd={(k, t) => { if (k === "pipi" || k === "ambos") save({ id: uid(), t, kind: "diaper", type: k }, "Pañal agregado ✓"); else { setPastT(t); setPast(k); } }} />}
+        onAdd={(k, t) => { if (k === "pipi" || k === "popo") save({ id: uid(), t, kind: "diaper", type: k }, "Pañal agregado ✓"); else { setPastT(t); setPast(k); } }} />}
       {past === "bottle" && <BottleModal onClose={() => setPast(null)} onSave={(ml, milk) => { save({ id: uid(), t: pastT, kind: "bottle", ml, milk }, "Biberón agregado ✓"); setPast(null); }} />}
       {past === "breast" && <BreastModal onClose={() => setPast(null)} onSave={(min) => { save({ id: uid(), t: pastT, kind: "breast", min }, "Toma de pecho agregada ✓"); setPast(null); }} />}
       {past === "pump" && <PumpModal onClose={() => setPast(null)} onSave={(ml) => { save({ id: uid(), t: pastT, kind: "pump", ml }, "Extracción agregada ✓"); setPast(null); }} />}
@@ -138,7 +138,7 @@ function PumpModal({ onClose, onSave }: { onClose: () => void; onSave: (ml: numb
   );
 }
 
-function HistoryModal({ entries, onClose, onAdd, onDel }: { entries: Entry[]; onClose: () => void; onAdd: (k: "bottle" | "breast" | "pump" | "pipi" | "ambos", t: number) => void; onDel: (id: string) => void }) {
+function HistoryModal({ entries, onClose, onAdd, onDel }: { entries: Entry[]; onClose: () => void; onAdd: (k: "bottle" | "breast" | "pump" | "pipi" | "popo", t: number) => void; onDel: (id: string) => void }) {
   const y = new Date(); y.setDate(y.getDate() - 1);
   const [date, setDate] = useState(toInput(y));
   const [time, setTime] = useState("12:00");
@@ -160,7 +160,7 @@ function HistoryModal({ entries, onClose, onAdd, onDel }: { entries: Entry[]; on
         <button onClick={() => onAdd("breast", t)} className={`${btn} bg-accent text-accent-foreground`}>🤱 Pecho</button>
         <button onClick={() => onAdd("pump", t)} className={`${btn} bg-secondary text-secondary-foreground`}>🫙 Extracción</button>
         <button onClick={() => onAdd("pipi", t)} className={`${btn} bg-muted`}>💧 Pipí</button>
-        <button onClick={() => onAdd("ambos", t)} className={`${btn} bg-muted`}>🧷 Ambos</button>
+        <button onClick={() => onAdd("popo", t)} className={`${btn} bg-muted`}>💩 Popó</button>
       </div>
       <p className="mt-5 mb-2 text-sm font-extrabold uppercase tracking-wider text-muted-foreground">Registros de ese día</p>
       {list.length === 0 ? <p className="rounded-2xl bg-muted/50 p-4 text-center text-muted-foreground">Sin registros.</p> :
@@ -269,11 +269,11 @@ function ChartModal({ entries, onClose }: { entries: Entry[]; onClose: () => voi
             <div key={i} className="flex flex-1 flex-col items-center gap-1">
               <div className="flex h-32 items-end gap-0.5">
                 <div className="flex w-2.5 flex-col justify-end overflow-hidden rounded-t-md" style={{ height: `${((d.formula + d.materna) / max) * 100}%` }}>
-                  <div className="bg-secondary" style={{ height: `${d.formula + d.materna ? (d.materna / (d.formula + d.materna)) * 100 : 0}%` }} />
+                  <div className="bg-accent" style={{ height: `${d.formula + d.materna ? (d.materna / (d.formula + d.materna)) * 100 : 0}%` }} />
                   <div className="flex-1 bg-primary" />
                 </div>
-                <div className="w-2.5 rounded-t-md bg-accent" style={{ height: `${(d.pump / max) * 100}%` }} />
-                <div className="w-2.5 rounded-t-md bg-foreground/25" style={{ height: `${((d.pipi + d.ambos) / maxD) * 100}%` }} />
+                <div className="w-2.5 rounded-t-md bg-secondary" style={{ height: `${(d.pump / max) * 100}%` }} />
+                <div className="w-2.5 rounded-t-md bg-muted-foreground/40" style={{ height: `${((d.pipi + d.ambos) / maxD) * 100}%` }} />
               </div>
               <span className="text-[10px] font-bold capitalize text-muted-foreground">{d.label}</span>
             </div>
@@ -281,9 +281,9 @@ function ChartModal({ entries, onClose }: { entries: Entry[]; onClose: () => voi
         </div>
         <div className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs font-bold text-muted-foreground">
           <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded bg-primary" />Fórmula</span>
-          <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded bg-secondary" />Materna</span>
-          <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded bg-accent" />Extracción</span>
-          <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded bg-foreground/25" />Pañales</span>
+          <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded bg-accent" />Materna</span>
+          <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded bg-secondary" />Extracción</span>
+          <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded bg-muted-foreground/40" />Pañales</span>
         </div>
       </div>
 
@@ -291,7 +291,7 @@ function ChartModal({ entries, onClose }: { entries: Entry[]; onClose: () => voi
         <Stat cls="bg-primary text-primary-foreground" label="🍼 Biberón" value={fmtMl(sum.formula + sum.materna, unit)} sub={`${sum.bottles} tomas · F ${fmtMl(sum.formula, unit)} / M ${fmtMl(sum.materna, unit)}`} />
         <Stat cls="bg-accent text-accent-foreground" label="🤱 Pecho" value={`${sum.breastMin} min`} sub={`${sum.breasts} tomas`} />
         <Stat cls="bg-secondary text-secondary-foreground" label="🫙 Extracción" value={fmtMl(sum.pump, unit)} sub={`${sum.pumps} extracciones`} />
-        <Stat cls="bg-muted" label="🧷 Pañales" value={`${sum.pipi + sum.ambos}`} sub={`${sum.pipi} pipí · ${sum.ambos} ambos`} />
+        <Stat cls="bg-muted" label="🧷 Pañales" value={`${sum.pipi + sum.ambos}`} sub={`${sum.pipi} pipí · ${sum.ambos} popó`} />
       </div>
       {mode === "week" && <p className="mt-2 text-center text-xs text-muted-foreground">Promedio diario biberón: {fmtMl(Math.round((sum.formula + sum.materna) / 7), unit)}</p>}
 
